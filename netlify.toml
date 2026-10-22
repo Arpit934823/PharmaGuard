@@ -1,0 +1,40 @@
+# Netlify configuration for PharmaGuard
+# Single-site deployment: static frontend + backend as a Netlify Function
+
+[build]
+  # Install root deps (serverless-http + backend deps), then build frontend
+  command = "npm install && cd frontend && npm install && npm run build"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # Bundle the sample VCF and all backend source files with the function
+  included_files = ["backend/**"]
+
+# Local dev: set NETLIFY=true so the bundled server.js skips app.listen()
+# (prevents a "port already in use" warning from netlify dev)
+[dev]
+  environment = { NETLIFY = "true" }
+  command = "cd frontend && npm run dev"
+  targetPort = 5173
+  port = 8888
+  autoLaunch = false
+
+# ─── Redirects ────────────────────────────────────────────────────────────────
+
+# 1. Route all /api/* requests to the Netlify Function (must come FIRST)
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/api/:splat"
+  status = 200
+  force  = true
+
+# 2. SPA fallback – everything else serves index.html (must come LAST)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
